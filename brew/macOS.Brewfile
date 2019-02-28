@@ -12,7 +12,6 @@ tap "homebrew/services"
 brew "bash"
 brew "bash-completion"
 brew "coreutils" # for awesome commands like timeout
-brew "diff-so-fancy"
 brew "git"
 brew "htop"
 brew "httpie"
@@ -23,7 +22,7 @@ brew "reattach-to-user-namespace" # for tmux commands to work
 brew "tldr"
 brew "tmux"
 brew "tree"
-brew "vim --override-system-vi"
+brew "vim"
 brew "wget"
 brew "yarn"
 
