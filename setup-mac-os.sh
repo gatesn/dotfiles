@@ -11,12 +11,8 @@ main() {
     install_packages_with_brewfile
     # Remove quarantine from casks downloaded by brew
     remove_quarantine
-    # Changing default shell to Fish
-    change_shell_to_fish
     # Installing pip packages so that setup_symlinks can setup the symlinks
     install_pip_packages
-    # Installing yarn packages
-    install_yarn_packages
     # Setting up symlinks so that setup_vim can install all plugins
     setup_symlinks
     # Setting up Vim
@@ -51,7 +47,7 @@ function install_homebrew() {
     if hash brew 2>/dev/null; then
         success "Homebrew already exists"
     else
-url=https://raw.githubusercontent.com/Sajjadhosn/dotfiles/master/installers/homebrew_installer
+        url="https://raw.githubusercontent.com/Homebrew/install/master/install"
         if /usr/bin/ruby -e "$(curl -fsSL ${url})"; then
             success "Homebrew installation succeeded"
         else
@@ -83,36 +79,8 @@ function remove_quarantine() {
     success "Quarantine attributes from applications in ${APPLICATIONS_PATH} successfully removed"
 }
 
-function change_shell_to_fish() {
-    info "Fish shell setup"
-    if grep --quiet fish <<< "$SHELL"; then
-        success "Fish shell already exists"
-    else
-        user=$(whoami)
-        substep "Adding Fish executable to /etc/shells"
-        if grep --fixed-strings --line-regexp --quiet \
-            "/usr/local/bin/fish" /etc/shells; then
-            substep "Fish executable already exists in /etc/shells"
-        else
-            if echo /usr/local/bin/fish | sudo tee -a /etc/shells > /dev/null;
-            then
-                substep "Fish executable successfully added to /etc/shells"
-            else
-                error "Failed to add Fish executable to /etc/shells"
-                exit 1
-            fi
-        fi
-        substep "Switching shell to Fish for \"${user}\""
-        if sudo chsh -s /usr/local/bin/fish "$user"; then
-            success "Fish shell successfully set for \"${user}\""
-        else
-            error "Please try setting Fish shell again"
-        fi
-    fi
-}
-
 function install_pip_packages() {
-    pip_packages=(powerline-status requests tmuxp virtualenv)
+    pip_packages=(pip requests virtualenv pylint pytest pep8)
     info "Installing pip packages \"${pip_packages[*]}\""
 
     pip3_list_outcome=$(pip3 list)
@@ -122,7 +90,7 @@ function install_pip_packages() {
             grep --ignore-case "$package_to_install" &> /dev/null; then
             substep "\"${package_to_install}\" already exists"
         else
-            if pip3 install "$package_to_install"; then
+            if pip3 install -U "$package_to_install"; then
                 substep "Package \"${package_to_install}\" installation succeeded"
             else
                 error "Package \"${package_to_install}\" installation failed"
@@ -134,32 +102,6 @@ function install_pip_packages() {
     success "pip packages successfully installed"
 }
 
-function install_yarn_packages() {
-    # Installing typescript for YouCompleteMe and prettier for Neoformat to auto-format files
-    # json for auto-formatting of json responses in terminal
-    # vmd for previewing markdown files
-    yarn_packages=(prettier typescript json vmd create-react-app @vue/cli)
-    info "Installing yarn packages \"${yarn_packages[*]}\""
-
-    yarn_list_outcome=$(yarn global list)
-    for package_to_install in "${yarn_packages[@]}"
-    do
-        if echo "$yarn_list_outcome" | \
-            grep --ignore-case "$package_to_install" &> /dev/null; then
-            substep "\"${package_to_install}\" already exists"
-        else
-            if yarn global add "$package_to_install"; then
-                substep "Package \"${package_to_install}\" installation succeeded"
-            else
-                error "Package \"${package_to_install}\" installation failed"
-                exit 1
-            fi
-        fi
-    done
-
-    success "yarn packages successfully installed"
-}
-
 function clone_dotfiles_repo() {
     info "Cloning dotfiles repository into ${DOTFILES_REPO}"
     if test -e $DOTFILES_REPO; then
@@ -167,9 +109,9 @@ function clone_dotfiles_repo() {
         pull_latest $DOTFILES_REPO
         success "Pull successful in ${DOTFILES_REPO} repository"
     else
-        url=https://github.com/Sajjadhosn/dotfiles.git
+        url=https://github.com/gatesn/dotfiles.git
         if git clone "$url" $DOTFILES_REPO && \
-           git remote set-url origin git@github.com:Sajjadhosn/dotfiles.git; then
+           git remote set-url origin git@github.com:gatesn/dotfiles.git; then
             success "Dotfiles repository cloned into ${DOTFILES_REPO}"
         else
             error "Dotfiles repository cloning failed"
@@ -188,6 +130,7 @@ function pull_latest() {
 }
 
 function setup_vim() {
+    # FIXME(gatesn): Do we want vundle or just pathogen?
     info "Setting up vim"
     substep "Installing Vundle"
     if test -e ~/.vim/bundle/Vundle.vim; then
@@ -246,24 +189,18 @@ function setup_tmux() {
 
 function setup_symlinks() {
     APPLICATION_SUPPORT=~/Library/Application\ Support
-    POWERLINE_ROOT_REPO=/usr/local/lib/python3.7/site-packages
 
     info "Setting up symlinks"
     symlink "git" ${DOTFILES_REPO}/git/gitconfig ~/.gitconfig
-    symlink "hammerspoon" ${DOTFILES_REPO}/hammerspoon ~/.hammerspoon
     symlink "iterm2" ${DOTFILES_REPO}/iTerm2/iterm_startup_script.scpt "${APPLICATION_SUPPORT}"/iTerm2/Scripts/AutoLaunch.scpt
-    symlink "karabiner" ${DOTFILES_REPO}/karabiner ~/.config/karabiner
-    symlink "powerline" ${DOTFILES_REPO}/powerline ${POWERLINE_ROOT_REPO}/powerline/config_files
     symlink "tmux" ${DOTFILES_REPO}/tmux/tmux.conf ~/.tmux.conf
     symlink "vim" ${DOTFILES_REPO}/vim/vimrc ~/.vimrc
 
-    # Disable shell login message
-    symlink "hushlogin" /dev/null ~/.hushlogin
-
-    symlink "fish:completions" ${DOTFILES_REPO}/fish/completions ~/.config/fish/completions
-    symlink "fish:functions"   ${DOTFILES_REPO}/fish/functions   ~/.config/fish/functions
-    symlink "fish:config.fish" ${DOTFILES_REPO}/fish/config.fish ~/.config/fish/config.fish
-    symlink "fish:oh_my_fish"  ${DOTFILES_REPO}/fish/oh_my_fish  ~/.config/omf
+    # FIXME(gatesn): symlink bash files
+    #symlink "fish:completions" ${DOTFILES_REPO}/fish/completions ~/.config/fish/completions
+    #symlink "fish:functions"   ${DOTFILES_REPO}/fish/functions   ~/.config/fish/functions
+    #symlink "fish:config.fish" ${DOTFILES_REPO}/fish/config.fish ~/.config/fish/config.fish
+    #symlink "fish:oh_my_fish"  ${DOTFILES_REPO}/fish/oh_my_fish  ~/.config/omf
 
     success "Symlinks successfully setup"
 }
